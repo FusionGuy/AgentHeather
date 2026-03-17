@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="96" fill="#E8F5E9" stroke="#4CAF50" stroke-width="3"/>
+  
+  <!-- Hair (behind head) -->
+  <ellipse cx="100" cy="85" rx="52" ry="55" fill="#8D6E63"/>
+  <!-- Hair sides -->
+  <ellipse cx="55" cy="100" rx="18" ry="35" fill="#8D6E63"/>
+  <ellipse cx="145" cy="100" rx="18" ry="35" fill="#8D6E63"/>
+  <!-- Hair wave detail -->
+  <path d="M 55 75 Q 70 55 100 60 Q 130 55 145 75" fill="#795548" opacity="0.6"/>
+  
+  <!-- Face -->
+  <ellipse cx="100" cy="95" rx="40" ry="45" fill="#FFDAB9"/>
+  
+  <!-- Hair bangs -->
+  <path d="M 60 72 Q 75 55 100 58 Q 125 55 140 72 Q 130 62 100 65 Q 70 62 60 72" fill="#8D6E63"/>
+  
+  <!-- Eyes -->
+  <ellipse cx="82" cy="90" rx="6" ry="7" fill="white"/>
+  <ellipse cx="118" cy="90" rx="6" ry="7" fill="white"/>
+  <circle cx="83" cy="91" r="3.5" fill="#5D4037"/>
+  <circle cx="119" cy="91" r="3.5" fill="#5D4037"/>
+  <!-- Eye sparkle -->
+  <circle cx="84.5" cy="89.5" r="1.2" fill="white"/>
+  <circle cx="120.5" cy="89.5" r="1.2" fill="white"/>
+  
+  <!-- Eyebrows -->
+  <path d="M 74 82 Q 82 78 90 81" stroke="#5D4037" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 110 81 Q 118 78 126 82" stroke="#5D4037" stroke-width="2" fill="none" stroke-linecap="round"/>
+  
+  <!-- Nose -->
+  <path d="M 100 95 Q 97 102 100 104 Q 103 102 100 95" fill="#E8C4A0" opacity="0.7"/>
+  
+  <!-- Smile -->
+  <path d="M 85 110 Q 100 122 115 110" stroke="#D4796A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- Cheek blush -->
+  <ellipse cx="72" cy="105" rx="8" ry="5" fill="#FFB3B3" opacity="0.5"/>
+  <ellipse cx="128" cy="105" rx="8" ry="5" fill="#FFB3B3" opacity="0.5"/>
+  
+  <!-- Neck -->
+  <rect x="90" y="135" width="20" height="12" rx="3" fill="#FFDAB9"/>
+  
+  <!-- Blazer / Professional top -->
+  <path d="M 60 170 Q 60 148 80 142 L 90 147 L 100 142 L 110 147 L 120 142 Q 140 148 140 170 Z" fill="#2E7D32"/>
+  
+  <!-- Collar -->
+  <path d="M 90 147 L 100 158 L 110 147 L 105 142 L 100 147 L 95 142 Z" fill="white"/>
+  
+  <!-- Headset -->
+  <path d="M 52 85 Q 48 60 100 50 Q 152 60 148 85" stroke="#424242" stroke-width="3" fill="none"/>
+  <rect x="44" y="82" width="12" height="18" rx="5" fill="#424242"/>
+  <rect x="144" y="82" width="12" height="18" rx="5" fill="#424242"/>
+  <!-- Headset mic -->
+  <path d="M 44 95 Q 35 95 35 108 Q 35 115 42 115" stroke="#424242" stroke-width="2.5" fill="none"/>
+  <circle cx="42" cy="115" r="3" fill="#424242"/>
+  
+  <!-- HR Badge -->
+  <rect x="55" y="155" width="24" height="16" rx="3" fill="white" stroke="#2E7D32" stroke-width="1"/>
+  <text x="67" y="166" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="#2E7D32" text-anchor="middle">HR</text>
+</svg>

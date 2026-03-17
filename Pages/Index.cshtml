@@ -1,0 +1,114 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "HR Policy Documents";
+    var avatarSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' width='200' height='200'%3E%3Ccircle cx='100' cy='100' r='96' fill='%23E8F5E9' stroke='%234CAF50' stroke-width='3'/%3E%3Cellipse cx='100' cy='85' rx='52' ry='55' fill='%238D6E63'/%3E%3Cellipse cx='55' cy='100' rx='18' ry='35' fill='%238D6E63'/%3E%3Cellipse cx='145' cy='100' rx='18' ry='35' fill='%238D6E63'/%3E%3Cpath d='M 55 75 Q 70 55 100 60 Q 130 55 145 75' fill='%23795548' opacity='0.6'/%3E%3Cellipse cx='100' cy='95' rx='40' ry='45' fill='%23FFDAB9'/%3E%3Cpath d='M 60 72 Q 75 55 100 58 Q 125 55 140 72 Q 130 62 100 65 Q 70 62 60 72' fill='%238D6E63'/%3E%3Cellipse cx='82' cy='90' rx='6' ry='7' fill='white'/%3E%3Cellipse cx='118' cy='90' rx='6' ry='7' fill='white'/%3E%3Ccircle cx='83' cy='91' r='3.5' fill='%235D4037'/%3E%3Ccircle cx='119' cy='91' r='3.5' fill='%235D4037'/%3E%3Ccircle cx='84.5' cy='89.5' r='1.2' fill='white'/%3E%3Ccircle cx='120.5' cy='89.5' r='1.2' fill='white'/%3E%3Cpath d='M 74 82 Q 82 78 90 81' stroke='%235D4037' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3Cpath d='M 110 81 Q 118 78 126 82' stroke='%235D4037' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3Cpath d='M 100 95 Q 97 102 100 104 Q 103 102 100 95' fill='%23E8C4A0' opacity='0.7'/%3E%3Cpath d='M 85 110 Q 100 122 115 110' stroke='%23D4796A' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3Cellipse cx='72' cy='105' rx='8' ry='5' fill='%23FFB3B3' opacity='0.5'/%3E%3Cellipse cx='128' cy='105' rx='8' ry='5' fill='%23FFB3B3' opacity='0.5'/%3E%3Crect x='90' y='135' width='20' height='12' rx='3' fill='%23FFDAB9'/%3E%3Cpath d='M 60 170 Q 60 148 80 142 L 90 147 L 100 142 L 110 147 L 120 142 Q 140 148 140 170 Z' fill='%232E7D32'/%3E%3Cpath d='M 90 147 L 100 158 L 110 147 L 105 142 L 100 147 L 95 142 Z' fill='white'/%3E%3Cpath d='M 52 85 Q 48 60 100 50 Q 152 60 148 85' stroke='%23424242' stroke-width='3' fill='none'/%3E%3Crect x='44' y='82' width='12' height='18' rx='5' fill='%23424242'/%3E%3Crect x='144' y='82' width='12' height='18' rx='5' fill='%23424242'/%3E%3Cpath d='M 44 95 Q 35 95 35 108 Q 35 115 42 115' stroke='%23424242' stroke-width='2.5' fill='none'/%3E%3Ccircle cx='42' cy='115' r='3' fill='%23424242'/%3E%3Crect x='55' y='155' width='24' height='16' rx='3' fill='white' stroke='%232E7D32' stroke-width='1'/%3E%3Ctext x='67' y='166' font-family='Arial, sans-serif' font-size='8' font-weight='bold' fill='%232E7D32' text-anchor='middle'%3EHR%3C/text%3E%3C/svg%3E";
+}
+
+<div class="container">
+    <h1 class="my-4">HR Policy Document Library</h1>
+
+    <!-- Agent Q&A -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-success">
+                <div class="card-header bg-success bg-opacity-10 d-flex align-items-center">
+                    <img src="@avatarSrc" alt="Heather" width="48" height="48" class="rounded-circle me-3" style="border: 2px solid #4CAF50; background: white;" />
+                    <div>
+                        <strong class="fs-5">Ask Agent Heather</strong>
+                        <br /><small class="text-muted">Your friendly HR assistant 💼</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="post" asp-page-handler="Ask" class="d-flex" id="askForm">
+                        <textarea name="Question" class="form-control me-2" rows="2" placeholder="Ask questions about HR policies & procedures...">@Model.Question</textarea>
+                        <button type="submit" class="btn btn-success" id="askButton">
+                            <span id="buttonText">Ask Agent</span>
+                            <span id="loadingSpinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+                        </button>
+                    </form>
+                    @if (!string.IsNullOrWhiteSpace(Model.Answer))
+                    {
+                        <div class="alert alert-success alert-dismissible mt-3 d-flex align-items-start">
+                            <img src="@avatarSrc" alt="Heather" width="40" height="40" class="rounded-circle me-3 flex-shrink-0" style="border: 2px solid #4CAF50; background: white; margin-top: 2px;" />
+                            <div>
+                                <strong>Heather says:</strong>
+                                <div style="white-space: pre-wrap;">@Model.Answer</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+  
+    <div class="row">
+        @foreach (var doc in Model.Documents)
+        {
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">@doc.Title</h5>
+                        <span class="badge bg-secondary">@doc.PageCount pages</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            <small class="text-muted">File: @doc.FileName</small>
+                        </p>
+                        <p class="card-text">
+                            <button type="button" class="btn btn-outline-primary btn-sm" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#docModal-@doc.Id">
+                                View Content
+                            </button>
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <small class="text-muted">Ingested: @doc.IngestedDate.ToString("yyyy-MM-dd")</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal for @doc.Title -->
+            <div class="modal fade" id="docModal-@doc.Id" tabindex="-1" aria-labelledby="docModalLabel-@doc.Id" aria-hidden="true">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="docModalLabel-@doc.Id">@doc.Title</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div style="max-height: 60vh; overflow-y: auto;">
+                                <pre style="white-space: pre-wrap; word-wrap: break-word;">@doc.Content</pre>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (Model.Documents.Count == 0)
+    {
+        <div class="alert alert-warning">
+            No documents found.
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('askForm').addEventListener('submit', function() {
+            var button = document.getElementById('askButton');
+            var buttonText = document.getElementById('buttonText');
+            var loadingSpinner = document.getElementById('loadingSpinner');
+            
+            button.disabled = true;
+            buttonText.textContent = ' Processing...';
+            loadingSpinner.style.display = 'inline-block';
+        });
+    </script>
+}
