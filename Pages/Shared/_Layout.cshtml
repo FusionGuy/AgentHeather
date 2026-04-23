@@ -1,10 +1,37 @@
-﻿<!DOCTYPE html>
+﻿@*
+    =====================================================================
+    File: Pages/Shared/_Layout.cshtml
+
+    Purpose:
+        The master layout used by every Razor Page (set in _ViewStart.cshtml).
+        Renders the shared HTML shell: head/meta/CSS, the top navigation bar
+        with Heather's avatar, the @RenderBody() placeholder for each page's
+        content, the footer, and the shared JS includes (jQuery, Bootstrap
+        bundle, marked.js for client-side Markdown rendering).
+
+    Features:
+        * Bootstrap 5.3 and marked.js are loaded from jsDelivr – no local
+          static assets required for base functionality.
+        * Individual pages can contribute additional scripts via:
+              @@section Scripts { ... }
+          which is rendered just before the closing </body> tag.
+
+    Notes:
+        * The navbar brand uses the same inline-SVG avatar as the pages
+          so the site feels consistent without any image files on disk.
+        * Site-wide CSS is embedded here for simplicity; consider moving
+          it to wwwroot/css/ for larger projects.
+    =====================================================================
+*@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - HeatherDemoApp</title>
+    @* Bootstrap 5.3 CSS loaded from a CDN. *@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    @* Small amount of inline site CSS – no external wwwroot/css/site.css file in this demo. *@
     <style>
         /* site.css */
         html { font-size: 14px; position: relative; min-height: 100%; }
@@ -25,9 +52,11 @@
     </style>
 </head>
 <body>
+    @* Top navigation bar: brand logo + top-level page links. *@
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container">
+                @* Brand / home link with Heather's avatar as inline SVG data URI. *@
                 <a class="navbar-brand d-flex align-items-center" asp-area="" asp-page="/Index">
                     <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' width='200' height='200'%3E%3Ccircle cx='100' cy='100' r='96' fill='%23E8F5E9' stroke='%234CAF50' stroke-width='3'/%3E%3Cellipse cx='100' cy='85' rx='52' ry='55' fill='%238D6E63'/%3E%3Cellipse cx='55' cy='100' rx='18' ry='35' fill='%238D6E63'/%3E%3Cellipse cx='145' cy='100' rx='18' ry='35' fill='%238D6E63'/%3E%3Cpath d='M 55 75 Q 70 55 100 60 Q 130 55 145 75' fill='%23795548' opacity='0.6'/%3E%3Cellipse cx='100' cy='95' rx='40' ry='45' fill='%23FFDAB9'/%3E%3Cpath d='M 60 72 Q 75 55 100 58 Q 125 55 140 72 Q 130 62 100 65 Q 70 62 60 72' fill='%238D6E63'/%3E%3Cellipse cx='82' cy='90' rx='6' ry='7' fill='white'/%3E%3Cellipse cx='118' cy='90' rx='6' ry='7' fill='white'/%3E%3Ccircle cx='83' cy='91' r='3.5' fill='%235D4037'/%3E%3Ccircle cx='119' cy='91' r='3.5' fill='%235D4037'/%3E%3Ccircle cx='84.5' cy='89.5' r='1.2' fill='white'/%3E%3Ccircle cx='120.5' cy='89.5' r='1.2' fill='white'/%3E%3Cpath d='M 74 82 Q 82 78 90 81' stroke='%235D4037' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3Cpath d='M 110 81 Q 118 78 126 82' stroke='%235D4037' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3Cpath d='M 100 95 Q 97 102 100 104 Q 103 102 100 95' fill='%23E8C4A0' opacity='0.7'/%3E%3Cpath d='M 85 110 Q 100 122 115 110' stroke='%23D4796A' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3Cellipse cx='72' cy='105' rx='8' ry='5' fill='%23FFB3B3' opacity='0.5'/%3E%3Cellipse cx='128' cy='105' rx='8' ry='5' fill='%23FFB3B3' opacity='0.5'/%3E%3Crect x='90' y='135' width='20' height='12' rx='3' fill='%23FFDAB9'/%3E%3Cpath d='M 60 170 Q 60 148 80 142 L 90 147 L 100 142 L 110 147 L 120 142 Q 140 148 140 170 Z' fill='%232E7D32'/%3E%3Cpath d='M 90 147 L 100 158 L 110 147 L 105 142 L 100 147 L 95 142 Z' fill='white'/%3E%3Cpath d='M 52 85 Q 48 60 100 50 Q 152 60 148 85' stroke='%23424242' stroke-width='3' fill='none'/%3E%3Crect x='44' y='82' width='12' height='18' rx='5' fill='%23424242'/%3E%3Crect x='144' y='82' width='12' height='18' rx='5' fill='%23424242'/%3E%3Cpath d='M 44 95 Q 35 95 35 108 Q 35 115 42 115' stroke='%23424242' stroke-width='2.5' fill='none'/%3E%3Ccircle cx='42' cy='115' r='3' fill='%23424242'/%3E%3Crect x='55' y='155' width='24' height='16' rx='3' fill='white' stroke='%232E7D32' stroke-width='1'/%3E%3Ctext x='67' y='166' font-family='Arial, sans-serif' font-size='8' font-weight='bold' fill='%232E7D32' text-anchor='middle'%3EHR%3C/text%3E%3C/svg%3E" alt="Heather" width="36" height="36" class="rounded-circle me-2" style="border: 2px solid #4CAF50;" />
                     <span>Agent Heather</span>
@@ -36,6 +65,7 @@
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+                @* Collapsible nav links – rendered as a hamburger menu on small screens. *@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
@@ -52,21 +82,27 @@
             </div>
         </nav>
     </header>
+
+    @* Main page content goes here – each page injects its body via @RenderBody(). *@
     <div class="container">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
+    @* Footer: copyright + privacy link. Positioned absolutely via the .footer CSS class above. *@
     <footer class="border-top footer text-muted">
         <div class="container">
             &copy; 2026 - Planet Technologies, Inc. - <a asp-area="" asp-page="/Privacy">Privacy</a>
         </div>
     </footer>
 
+    @* Shared JS includes used by every page. marked.js powers the Markdown rendering in Chat/Index. *@
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
+    @* Per-page scripts are rendered here via @@section Scripts { ... } blocks in individual views. *@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

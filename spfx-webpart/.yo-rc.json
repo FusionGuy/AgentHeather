@@ -1,0 +1,13 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "solutionName": "heather-chat-webpart",
+    "framework": "react",
+    "version": "1.20.0",
+    "libraryName": "heather-chat-webpart",
+    "libraryId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "environment": "spo",
+    "packageManager": "npm",
+    "isCreatingSolution": true,
+    "isDomainIsolated": false
+  }
+}

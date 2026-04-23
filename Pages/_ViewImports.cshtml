@@ -1,3 +1,18 @@
-﻿@using HeatherDemoApp
+﻿@*
+    =====================================================================
+    File: Pages/_ViewImports.cshtml
+
+    Purpose:
+        Shared Razor directives imported into every .cshtml view under
+        the Pages/ folder. This removes the need to repeat @using /
+        @namespace / @addTagHelper directives in each individual view.
+
+    Directives:
+        * @using HeatherDemoApp                          – root app namespace.
+        * @namespace HeatherDemoApp.Pages                – page class namespace.
+        * @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers – enable asp-* tag helpers.
+    =====================================================================
+*@
+@using HeatherDemoApp
 @namespace HeatherDemoApp.Pages
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers

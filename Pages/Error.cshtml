@@ -1,4 +1,26 @@
-﻿@page
+﻿@*
+    =====================================================================
+    File: Pages/Error.cshtml
+
+    Purpose:
+        Global error page rendered by the production exception-handler
+        middleware (see Program.cs -> UseExceptionHandler("/Error")).
+
+        Displays a generic failure message plus the correlation id
+        (Activity.Current?.Id or HttpContext.TraceIdentifier) so an
+        operator can locate the matching server-side log entry.
+
+    Model:
+        ErrorModel (Pages/Error.cshtml.cs) exposes:
+            * RequestId     – the correlation id
+            * ShowRequestId – true when RequestId is non-empty
+
+    Notes:
+        * The page model is decorated with [ResponseCache] + [IgnoreAntiforgeryToken]
+          so the error view is never cached and doesn't require a token.
+    =====================================================================
+*@
+@page
 @model ErrorModel
 @{
     ViewData["Title"] = "Error";
@@ -7,6 +29,7 @@
 <h1 class="text-danger">Error.</h1>
 <h2 class="text-danger">An error occurred while processing your request.</h2>
 
+@* Only render the correlation id if one is available, so end users aren't shown empty <code/> tags. *@
 @if (Model.ShowRequestId)
 {
     <p>

@@ -1,2 +1,23 @@
-﻿<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+﻿@*
+    =====================================================================
+    File: Pages/Shared/_ValidationScriptsPartial.cshtml
+
+    Purpose:
+        Reusable partial view that emits the <script> tags for jQuery
+        Validation and its unobtrusive adapter. Include it on any form
+        page that uses [DataAnnotations]-driven client-side validation:
+
+            @section Scripts {
+                <partial name="_ValidationScriptsPartial" />
+            }
+
+    Notes:
+        * The script paths point at the default wwwroot/lib/ locations
+          created by the Razor Pages project template.
+        * This file is currently unused by the Heather UI (the chat
+          forms don't rely on data-annotation validation), but is kept
+          to match the standard template and to be available if needed.
+    =====================================================================
+*@
+<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
 <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "heather-chat-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/heatherChat/HeatherChatWebPart.js",
+          "manifest": "./src/webparts/heatherChat/HeatherChatWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "HeatherChatWebPartStrings": "lib/webparts/heatherChat/loc/{locale}.js"
+  }
+}

@@ -8,7 +8,10 @@ if (Test-Path $deployDir) { Remove-Item -Recurse -Force $deployDir }
 dotnet publish HeatherDemoApp.csproj -c Release -r linux-x64 --self-contained false -o $deployDir
 Write-Host "Publish complete."
 
-# Step 2: Zip
+# Step 2: Add .deployment file to disable Oryx build on server
+Set-Content -Path "$deployDir\.deployment" -Value "[config]`nSCM_DO_BUILD_DURING_DEPLOYMENT=false"
+
+# Step 3: Zip
 Write-Host "Creating zip archive..."
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
 Add-Type -Assembly "System.IO.Compression.FileSystem"
@@ -16,24 +19,12 @@ Add-Type -Assembly "System.IO.Compression.FileSystem"
 $sizeMB = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
 Write-Host "Zip created: $sizeMB MB"
 
-# Step 3: Deploy
-Write-Host "Getting access token..."
-$token = az account get-access-token --resource "https://management.azure.com/" --query accessToken -o tsv
-
+# Step 4: Deploy using az webapp deploy (no remote build)
 Write-Host "Deploying to heather-demo-chat..."
-$headers = @{
-    "Authorization" = "Bearer $token"
-    "Content-Type" = "application/zip"
-}
-
-$response = Invoke-RestMethod -Uri "https://heather-demo-chat.scm.azurewebsites.net/api/zipdeploy?isAsync=false" `
-    -Method Post `
-    -Headers $headers `
-    -InFile $zipPath `
-    -TimeoutSec 600
+az webapp deploy --name heather-demo-chat --resource-group RG-Marc.Merritt --src-path $zipPath --type zip --track-status false
 Write-Host "Deployment succeeded!"
 
-# Step 4: Restart
+# Step 5: Restart
 Write-Host "Restarting app..."
-az webapp restart --name heather-demo-chat --resource-group rg-marc.merritt
+az webapp restart --name heather-demo-chat --resource-group RG-Marc.Merritt 2>$null
 Write-Host "Done! App available at https://heather-demo-chat.azurewebsites.net"
