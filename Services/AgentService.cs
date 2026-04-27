@@ -113,14 +113,21 @@ public class AgentService : IAgentService
     {
         _logger = logger;
 
-        // Resolve the AI Project endpoint from configuration, falling back to
-        // a hard-coded dev value if not provided (convenient for local runs).
+        // Resolve the AI Project endpoint from configuration. Required – we
+        // intentionally do NOT provide a fallback so a missing/typo'd config
+        // key fails fast at startup instead of silently routing traffic to
+        // the wrong Foundry project.
         var endpoint = configuration["AzureAIAgent:Endpoint"]
-            ?? "https://act-ai-resource.services.ai.azure.com/api/projects/act-ai";
+            ?? throw new InvalidOperationException(
+                "Configuration value 'AzureAIAgent:Endpoint' is required but was not provided. " +
+                "Set it in appsettings.json or as an App Service application setting.");
 
-        // Resolve the agent id similarly; this is the id of the deployed Heather agent.
+        // Resolve the agent id similarly; this is the id of the deployed
+        // Heather agent in Azure AI Foundry. Required – no fallback.
         _agentId = configuration["AzureAIAgent:AgentId"]
-            ?? "asst_W7ff2nrIicaasFZOlNsusIrf";
+            ?? throw new InvalidOperationException(
+                "Configuration value 'AzureAIAgent:AgentId' is required but was not provided. " +
+                "Set it in appsettings.json or as an App Service application setting.");
 
         _logger.LogInformation("Initializing AgentService with endpoint: {Endpoint}", endpoint);
 

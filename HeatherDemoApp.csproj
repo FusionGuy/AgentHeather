@@ -4,6 +4,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Prevent local-only / sibling-project folders from being swept into the
+         build/publish output as Content. Without these, their files end up
+         under /home/site/wwwroot/... on the App Service and break rsync.
+           - publish/      : ad-hoc `dotnet publish` output (also in .gitignore)
+           - spfx-webpart/ : SharePoint Framework TypeScript sub-project,
+                             built/deployed independently of this web app -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);publish\**;publish/**;spfx-webpart\**;spfx-webpart/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

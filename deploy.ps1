@@ -12,10 +12,13 @@ Write-Host "Publish complete."
 Set-Content -Path "$deployDir\.deployment" -Value "[config]`nSCM_DO_BUILD_DURING_DEPLOYMENT=false"
 
 # Step 3: Zip
+# IMPORTANT: Use Compress-Archive (not System.IO.Compression.ZipFile) because
+# the latter writes Windows backslashes as path separators in zip entry names
+# on Windows, which Linux App Service rsync rejects with "Invalid argument (22)".
+# Compress-Archive writes proper forward-slash entries.
 Write-Host "Creating zip archive..."
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-Add-Type -Assembly "System.IO.Compression.FileSystem"
-[System.IO.Compression.ZipFile]::CreateFromDirectory($deployDir, $zipPath)
+Compress-Archive -Path "$deployDir\*" -DestinationPath $zipPath -CompressionLevel Optimal -Force
 $sizeMB = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
 Write-Host "Zip created: $sizeMB MB"
 
