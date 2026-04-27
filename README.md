@@ -1,12 +1,12 @@
-# Agent Heather — HR Policy Chat Assistant
+# Agent Heather — SWBC HR Policy Chat Assistant
 
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-purple)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![Azure App Service](https://img.shields.io/badge/Azure-App%20Service-blue)](https://azure.microsoft.com/services/app-service/)
-[![Azure OpenAI](https://img.shields.io/badge/Azure-OpenAI-green)](https://azure.microsoft.com/products/ai-services/openai-service)
+[![Microsoft Foundry](https://img.shields.io/badge/Microsoft-Foundry-orange)](https://learn.microsoft.com/azure/ai-foundry/)
 
-**Agent Heather** is an ASP.NET Core Razor Pages web application that serves as an AI-powered HR policy assistant. It ingests HR policy documents and uses Azure OpenAI (GPT) with a TF-IDF retrieval-augmented generation (RAG) pipeline to answer employee questions about HR policies and procedures.
+**Agent Heather** is an ASP.NET Core Razor Pages web application that serves as an AI-powered HR policy assistant for **SWBC**. It is a thin UI in front of a **Microsoft Foundry Persistent Agent** named "Heather"; all retrieval, ranking, and grounding happen inside Foundry against a text knowledge file uploaded to the agent.
 
-🌐 **Live Demo**: [https://heather-demo-chat.azurewebsites.net](https://heather-demo-chat.azurewebsites.net)
+🌐 **Live Demo**: <https://heather-demo-chat.azurewebsites.net>
 
 ---
 
@@ -14,135 +14,158 @@
 
 - [Features](#features)
 - [Architecture](#architecture)
+- [Knowledge Source](#knowledge-source)
 - [Project Structure](#project-structure)
 - [How It Works](#how-it-works)
-- [Prerequisites](#prerequisites)
 - [Configuration](#configuration)
+- [Prerequisites](#prerequisites)
 - [Building & Running Locally](#building--running-locally)
 - [Deployment](#deployment)
-- [Suggested Improvements](#suggested-improvements)
+- [SharePoint SPFx Web Part](#sharepoint-spfx-web-part)
+- [Notes & Caveats](#notes--caveats)
 
 ---
 
 ## Features
 
-- **Document Library** — Browse pre-loaded HR policy documents with metadata (title, filename, page count, ingestion date) and view full content in modals
-- **Single-Question Q&A** — Ask a one-off question on the home page and get a cited answer from Agent Heather
-- **Multi-Turn Chat** — Full conversational chat interface with session-based message history
-- **TF-IDF Retrieval** — Lightweight in-memory retrieval engine that chunks documents and ranks them by cosine similarity to find the most relevant context
-- **Azure OpenAI Integration** — Sends retrieved context + user question to Azure OpenAI's Responses API for grounded, cited answers
-- **Responsive UI** — Bootstrap 5.3 layout with a custom Heather avatar (SVG)
+- **Single-Question Q&A** — Ask a one-off question on the home page (`/`) and get a grounded answer from Agent Heather.
+- **Multi-Turn Chat** — Full conversational chat at `/Chat` with session-scoped message history.
+- **Embeddable `/api/chat` endpoint** — A minimal HTTP endpoint consumed by the bundled SharePoint Framework (SPFx) web part so Heather can be embedded in SharePoint pages.
+- **Foundry-grounded responses** — Every turn is sent to a Microsoft Foundry Persistent Agent that has been instructed (via system prompt) to answer **only** from its uploaded SWBC HR knowledge file.
+- **Defense-in-depth grounding** — `AgentService` re-asserts the SWBC-only constraint on every run via `additionalInstructions`, in addition to the agent's own system prompt.
+- **Managed-Identity friendly** — Uses `DefaultAzureCredential`, so the same code authenticates locally (Azure CLI / Visual Studio) and in Azure App Service (Managed Identity) without any code changes or secrets.
+- **SPFx-iframe ready** — Cookie SameSite, anti-forgery, CORS, and CSP `frame-ancestors` are all pre-configured for embedding in SharePoint Online and the SPFx local workbench.
 
 ---
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    subgraph Browser["Browser"]
+      Idx["/ (Index)<br/>Single Q&amp;A"]
+      Chat["/Chat<br/>Multi-turn"]
+      SPFx["SharePoint page<br/>(SPFx web part)"]
+    end
+
+    subgraph App["ASP.NET Core Razor Pages<br/>(Azure App Service - Linux)"]
+      ApiChat["POST /api/chat"]
+      Agent["IAgentService<br/>(AgentService.cs)"]
+    end
+
+    subgraph Foundry["Microsoft Foundry Project"]
+      Persistent["Persistent Agent 'Heather'"]
+      KB[("Uploaded knowledge<br/>(SWBC HR text file)")]
+      Persistent --> KB
+    end
+
+    Idx -->|POST form| Agent
+    Chat -->|POST form| Agent
+    SPFx -->|JSON POST<br/>CORS-restricted| ApiChat
+    ApiChat --> Agent
+    Agent -->|DefaultAzureCredential<br/>+ AIProjectClient| Persistent
 ```
-┌─────────────────────────────────────────────────────┐
-│                    Browser (User)                    │
-│                                                     │
-│  ┌──────────┐  ┌──────────┐  ┌───────────────────┐  │
-│  │ Index    │  │ Chat     │  │ Privacy / Error   │  │
-│  │ (Q&A)   │  │ (Multi-  │  │                   │  │
-│  │          │  │  turn)   │  │                   │  │
-│  └────┬─────┘  └────┬─────┘  └───────────────────┘  │
-└───────┼──────────────┼───────────────────────────────┘
-        │              │
-        ▼              ▼
-┌─────────────────────────────────────────────────────┐
-│              ASP.NET Core Razor Pages                │
-│                                                     │
-│  ┌──────────────┐  ┌────────────────────────────┐   │
-│  │ AgentService │◄─┤ TfIdfRetrievalService      │   │
-│  │              │  │  • Chunk documents (700ch)  │   │
-│  │  • Build     │  │  • TF-IDF vectorization     │   │
-│  │    prompt    │  │  • Cosine similarity ranking │   │
-│  │  • Call API  │  └────────────┬───────────────┘   │
-│  │  • Parse     │               │                   │
-│  │    response  │  ┌────────────┴───────────────┐   │
-│  └──────┬───────┘  │ PdfService                 │   │
-│         │          │  • In-memory document store │   │
-│         │          │  • 4 pre-loaded HR manuals  │   │
-│         │          └────────────────────────────┘   │
-└─────────┼───────────────────────────────────────────┘
-          │
-          ▼
-┌─────────────────────┐
-│   Azure OpenAI      │
-│   Responses API     │
-│   (GPT-5.2-chat)    │
-└─────────────────────┘
-```
+
+The web app does not perform any retrieval, chunking, embedding, or ranking of its own. Each request creates a Foundry thread, posts the user's history + new question, runs the agent, reads back the assistant's reply, and then deletes the thread.
+
+---
+
+## Knowledge Source
+
+Heather's knowledge is **not loaded by this web app at runtime**. Instead:
+
+1. SWBC HR/policy content was harvested from a public source as a single **text file**.
+2. That text file was **uploaded to the Foundry agent** as a knowledge source.
+3. Foundry handles indexing, retrieval, citation, and grounding inside the agent run.
+
+This means there is **no PDF ingestion, no embeddings store, no TF-IDF, and no in-memory document service** in this repo. The `Services/PdfService.cs` and `Services/RetrievalService.cs` files referenced in older versions of this README have been removed.
+
+To update Heather's knowledge:
+
+1. Open the agent in the Foundry portal (the project endpoint and agent id are in `appsettings.json` under `AzureAIAgent`).
+2. Replace or augment the uploaded knowledge file.
+3. (Optional) Update the agent **Instructions** field — the recommended text is in `SystemMessage.md`.
+
+No code change or redeploy of this web app is required to update Heather's knowledge.
 
 ---
 
 ## Project Structure
 
-```
+```text
 HeatherDemoApp/
 ├── Models/
-│   ├── ChatMessage.cs          # Chat message model (role + content)
-│   └── PdfDocument.cs          # PDF document model (id, title, content, metadata)
+│   └── ChatMessage.cs                 # POCO: { Role, Content }, used for session history + Foundry replay
 ├── Pages/
 │   ├── Shared/
-│   │   ├── _Layout.cshtml      # Main layout (Bootstrap CDN, inline SVG avatar, nav)
-│   │   ├── _Layout.cshtml.css  # Scoped layout styles
+│   │   ├── _Layout.cshtml             # Master layout (Bootstrap CDN, inline SVG avatar, top nav)
+│   │   ├── _Layout.cshtml.css         # Scoped layout styles
 │   │   └── _ValidationScriptsPartial.cshtml
-│   ├── _ViewImports.cshtml     # Tag helper imports
-│   ├── _ViewStart.cshtml       # Default layout assignment
-│   ├── Index.cshtml / .cs      # Home page — document library + single Q&A
-│   ├── Chat.cshtml / .cs       # Multi-turn chat interface with session history
-│   ├── Privacy.cshtml / .cs    # Privacy policy page
-│   └── Error.cshtml / .cs      # Error page
+│   ├── _ViewImports.cshtml
+│   ├── _ViewStart.cshtml
+│   ├── Index.cshtml / .cs             # Home page – single Q&A (stateless)
+│   ├── Chat.cshtml / .cs              # Multi-turn chat (session-backed history)
+│   ├── Privacy.cshtml / .cs           # Privacy policy
+│   └── Error.cshtml / .cs             # Error page
 ├── Services/
-│   ├── AgentService.cs         # Azure OpenAI integration, prompt building, response parsing
-│   ├── PdfService.cs           # In-memory document store with 4 pre-loaded HR manuals
-│   └── RetrievalService.cs     # TF-IDF retrieval engine (chunking, vectorization, ranking)
+│   ├── AgentService.cs                # Foundry Persistent Agents client wrapper (the active backend)
+│   └── ChatApiService.cs              # ⚠️ Legacy / unused – see "Notes & Caveats"
 ├── wwwroot/
-│   ├── css/site.css            # Site-wide styles
-│   ├── images/heather-avatar.svg  # Heather avatar SVG
-│   ├── js/site.js              # Client-side JavaScript
-│   └── lib/                    # Bootstrap 5.3, jQuery 3.x, jQuery Validation
-├── Program.cs                  # App startup, DI registration, middleware pipeline
-├── appsettings.json            # Azure AI config, target site config
-├── appsettings.Development.json # Development overrides
-├── deploy.ps1                  # PowerShell deployment script (publish → zip → Azure)
-├── verify.ps1                  # Post-deployment verification script
-├── HeatherDemoApp.csproj       # Project file (.NET 10)
-└── HeatherDemoApp.sln          # Solution file
+│   ├── css/, images/, js/, lib/       # Site assets (Bootstrap, jQuery, validation, etc.)
+├── spfx-webpart/                      # Independent SharePoint Framework sub-project (built/deployed separately)
+├── Program.cs                         # App startup, DI, middleware pipeline, /api/chat mapping
+├── appsettings.json                   # AzureAIAgent endpoint + agent id, TargetSite metadata
+├── appsettings.Development.json       # Dev-only logging overrides
+├── appsettings.azure.json             # ⚠️ Legacy / unused – see "Notes & Caveats"
+├── HeatherDemoApp.csproj              # .NET 10 Web SDK project (excludes publish/ and spfx-webpart/ from content)
+├── HeatherDemoApp.sln                 # Solution file
+├── SystemMessage.md                   # Recommended Foundry agent Instructions text
+├── deploy_clean.ps1                   # Production deployment script (publish → zip → az webapp deploy --clean)
+└── verify.ps1                         # Post-deployment smoke test
 ```
 
 ---
 
 ## How It Works
 
-### 1. Document Ingestion
+### Startup (`Program.cs`)
 
-At startup (`Program.cs`), the app initializes services in sequence:
+1. Reads `WEBSITES_PORT` / `PORT` env vars and binds Kestrel to `http://0.0.0.0:<port>`.
+2. Registers Razor Pages, distributed memory cache, session, anti-forgery, and a `SharePointSPFx` CORS policy that allows `https://*.sharepoint.com`, `https://*.sharepoint.us`, and `https://localhost:4321` (SPFx local workbench).
+3. Registers `IAgentService` → `AgentService` as a **singleton** (the Foundry SDK clients are thread-safe and intended for reuse).
+4. Configures cookies for SharePoint iframe embedding (`SameSite=None; Secure`).
+5. Replaces `X-Frame-Options` with a CSP `frame-ancestors` directive that whitelists SharePoint and `localhost:*`.
+6. Maps Razor Pages and the minimal `POST /api/chat` endpoint (CORS-restricted to the `SharePointSPFx` policy).
 
-1. **`PdfService.InitializeAsync()`** — Loads 4 pre-hardcoded HR policy documents into memory (ENSO Group HR Manual, Community Foundations of Canada HR Guide, GESCI HR Policies, RHA Health Services HR Policy Manual)
-2. **`TfIdfRetrievalService.InitializeAsync(docs)`** — Chunks each document into ~700-character segments with 150-character overlap, then builds a document-frequency index across all chunks for TF-IDF scoring
+### A chat turn (`Services/AgentService.cs`)
 
-### 2. Question Answering (RAG Pipeline)
+For both the Razor pages and the `/api/chat` endpoint, every turn does the following:
 
-When a user asks a question:
+1. **Resolve the agent** via `_agentsClient.Administration.GetAgent(_agentId)` (also serves as a permission check).
+2. **Create a fresh Foundry thread** (`Threads.CreateThread()`) — one per request, to keep users isolated.
+3. **Replay history** — for the multi-turn `/Chat` page, prior `ChatMessage`s are posted to the thread (mapping `assistant` → `MessageRole.Agent`, everything else → `MessageRole.User`).
+4. **Post the new user question** as a `MessageRole.User` message.
+5. **Start a run** with hard-coded `additionalInstructions` that re-assert the SWBC-only constraint as a defense-in-depth measure on top of the agent's own system prompt.
+6. **Poll** until the run leaves `Queued`/`InProgress`. Anything other than `Completed` returns a friendly error to the caller.
+7. **Read the latest agent message** (descending order) and concatenate every `MessageTextContent` block into the response.
+8. **Delete the thread** in a `finally` block (best-effort cleanup).
 
-1. **Retrieval** — The `TfIdfRetrievalService` tokenizes the query, computes TF-IDF vectors, and ranks all chunks by cosine similarity to find the top 5 most relevant passages
-2. **Prompt Construction** — The `AgentService` builds a system prompt instructing the model to answer only from provided context, then assembles the conversation history + retrieved context + user question
-3. **Azure OpenAI Call** — Sends the assembled messages to Azure OpenAI's Responses API (`gpt-5.2-chat`)
-4. **Response Parsing** — Parses the response (handling multiple API response shapes) and returns the answer with document citations
+### Session history (`Pages/Chat.cshtml.cs`)
 
-### 3. Chat Session Management
+Conversation state for the `/Chat` page is stored in `HttpContext.Session` under the key `"chat_history"` as a JSON-serialized `List<ChatMessage>`. The session itself is backed by `AddDistributedMemoryCache()`, which is fine for single-instance App Service plans but **must be replaced** with Redis or SQL if you scale out.
 
-The Chat page (`Chat.cshtml.cs`) uses ASP.NET Core's session middleware (`DistributedMemoryCache` + `Session`) to persist conversation history as serialized JSON, enabling multi-turn conversations within a browser session.
+### `/api/chat` (for the SPFx web part)
 
----
+`Program.cs` maps a minimal endpoint:
 
-## Prerequisites
+```text
+POST /api/chat
+Content-Type: application/json
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- An [Azure OpenAI](https://azure.microsoft.com/products/ai-services/openai-service) resource with a deployed model
-- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) (for deployment only)
+{ "message": "How many sick days do I get?" }
+```
+
+It deserializes into `ChatApiRequest(string? Message)`, validates the `message` field is non-empty, calls `IAgentService.AskAsync(message)`, and returns `{ "response": "..." }`. The endpoint is locked down to the `SharePointSPFx` CORS policy via `RequireCors("SharePointSPFx")`.
 
 ---
 
@@ -152,54 +175,65 @@ The Chat page (`Chat.cshtml.cs`) uses ASP.NET Core's session middleware (`Distri
 
 ```json
 {
-  "AzureAI": {
-    "Endpoint": "https://your-resource.cognitiveservices.azure.com/openai/responses?api-version=2025-04-01-preview",
-    "Model": "gpt-5.2-chat",
-    "ApiKey": "YOUR_API_KEY_HERE"
+  "AzureAIAgent": {
+    "Endpoint": "https://<your-foundry-resource>.services.ai.azure.com/api/projects/<your-project>",
+    "AgentId":  "asst_xxxxxxxxxxxxxxxxxxxxxxxx"
   },
   "TargetSite": {
-    "Url": "https://your-site.com",
-    "Name": "Your Organization",
-    "ShortName": "Your Org",
-    "Description": "Description of your organization"
+    "Url":         "https://www.swbc.com/",
+    "Name":        "SWBC",
+    "ShortName":   "SWBC",
+    "Description": "Ask Heather questions about SWBC HR policies, procedures, and benefits",
+    "WelcomeItems": [ "..." ]
   }
 }
 ```
 
-> **⚠️ Security Note**: Never commit API keys to source control. The `AgentService` also checks the `AZURE_OPENAI_API_KEY` environment variable, which takes precedence over the config file. Use environment variables or Azure App Service application settings in production.
+`AzureAIAgent.Endpoint` and `AzureAIAgent.AgentId` are **required**. `AgentService` throws `InvalidOperationException` at startup if either is missing — there is no silent fallback. To override per environment, use the standard ASP.NET Core configuration system (e.g. App Service application settings using `AzureAIAgent__Endpoint` / `AzureAIAgent__AgentId`).
+
+`TargetSite` is currently metadata-only — it is not consumed by any view today, but is checked into source control so the deployed config always documents the intended target organization.
+
+### Authentication
+
+`AgentService` constructs a `DefaultAzureCredential` with `ExcludeVisualStudioCodeCredential` and `ExcludeInteractiveBrowserCredential` set, which means the credential chain effectively reduces to:
+
+- **Locally**: Azure CLI (`az login`) or Visual Studio.
+- **In Azure**: the App Service's system-assigned (or user-assigned) Managed Identity.
+
+Either principal must hold a role on the Foundry project that allows it to invoke the agent (e.g. `Azure AI Developer` on the project resource).
+
+> ⚠️ There are no API keys in this app and none should be added. All Foundry calls authenticate via Entra ID tokens.
+
+---
+
+## Prerequisites
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) (for deployment and local auth)
+- Access to the Foundry project that hosts the Heather agent (role: `Azure AI Developer` or higher)
 
 ---
 
 ## Building & Running Locally
 
-```bash
-# Clone the repository
-git clone https://github.com/FusionGuy/AgentHeather.git
-cd AgentHeather
+```powershell
+# Authenticate so DefaultAzureCredential can pick up your token
+az login
 
-# Set your API key (option 1: environment variable — recommended)
-export AZURE_OPENAI_API_KEY="your-key-here"
-
-# Or edit appsettings.json with your key (option 2 — local dev only)
-
-# Build and run
+# From the project root:
 dotnet run
 ```
 
-The app starts on **http://localhost:80** by default. To use a custom port:
+The app binds to `http://0.0.0.0:80` by default. To use a different port, set `PORT` (or `WEBSITES_PORT`) before running:
 
-```bash
-# Set PORT environment variable
-set PORT=5046    # Windows cmd
-$env:PORT=5046   # PowerShell
-export PORT=5046 # Linux/macOS
-
+```powershell
+$env:PORT = "5046"
 dotnet run
 ```
 
-Or use the `--urls` flag:
+Or pass `--urls` directly:
 
-```bash
+```powershell
 dotnet run --urls http://localhost:5046
 ```
 
@@ -207,70 +241,75 @@ dotnet run --urls http://localhost:5046
 
 ## Deployment
 
-The app is deployed to **Azure App Service** (Linux) via zip deploy. A PowerShell script automates the process:
+The app is deployed to **Azure App Service (Linux)** as a framework-dependent zip. The canonical deployment script is `deploy_clean.ps1`.
+
+### Target
+
+| Setting | Value |
+| --- | --- |
+| Subscription | `Marc Merritt – MPN` |
+| Resource group | `RG-Marc.Merritt` |
+| App Service | `heather-demo-chat` |
+| Public URL | <https://heather-demo-chat.azurewebsites.net> |
+
+### One-line deploy
 
 ```powershell
-# Ensure you're logged in to Azure CLI
-az login
-
-# Run the deployment script
-.\deploy.ps1
+az login                      # if you aren't already
+.\deploy_clean.ps1
+.\verify.ps1                  # optional smoke test
 ```
 
-### What `deploy.ps1` Does
+### What `deploy_clean.ps1` does
 
-1. **Publish** — `dotnet publish` with `Release` config, targeting `linux-x64` (framework-dependent)
-2. **Zip** — Creates a zip archive of the publish output
-3. **Deploy** — Uploads the zip to Azure App Service via the Kudu ZipDeploy API using an Azure management token
-4. **Restart** — Restarts the app service to pick up the new deployment
+1. **Acquire an ARM token** via `az account get-access-token`.
+2. **Reap stale failed deployments** — calls Kudu's `/api/deployments` and `DELETE`s any record with `status == 3` (Failed). This prevents a previous failure from blocking the next deploy.
+3. **Publish** — `dotnet publish HeatherDemoApp.csproj -c Release -r linux-x64 --self-contained false` to `C:\temp\heather_deploy`.
+4. **Disable Oryx server-side build** — writes `.deployment` with `SCM_DO_BUILD_DURING_DEPLOYMENT=false` into the publish output.
+5. **Build a forward-slash zip** — assembles entries one-by-one with `ZipFileExtensions.CreateEntryFromFile` and explicitly converts `\` → `/` in entry names. **This step matters**: `[System.IO.Compression.ZipFile]::CreateFromDirectory` on Windows produces backslash entry names, which the Linux App Service rsync rejects with `Invalid argument (22)`.
+6. **Deploy** — `az webapp deploy --type zip --clean true`. The `--clean true` flag wipes `/home/site/wwwroot` first, which is important because the `--src-path` zip is incremental by default and previous failed deploys may have left malformed file names on the site.
+7. **Restart** — `az webapp restart`.
 
-### Post-Deployment Verification
+### What the `.csproj` is doing for you
+
+`HeatherDemoApp.csproj` includes:
+
+```xml
+<DefaultItemExcludes>$(DefaultItemExcludes);publish\**;publish/**;spfx-webpart\**;spfx-webpart/**</DefaultItemExcludes>
+```
+
+This prevents two common bundling mistakes:
+
+- **`publish/`** — any ad-hoc `dotnet publish -o publish` output (also `.gitignore`d) gets recursively swept into the next publish output and ends up at `/home/site/wwwroot/publish/...`.
+- **`spfx-webpart/`** — the SharePoint Framework sub-project's TypeScript source has nothing to do with the .NET app and would otherwise be deployed as content (introducing literal `\` characters in path segments on Linux).
+
+Without this, deploys to App Service Linux fail at the rsync step.
+
+### Verify
 
 ```powershell
 .\verify.ps1
 ```
 
-Waits 30 seconds for the app to start, then checks if the homepage returns HTTP 200 and contains the expected content.
+Waits 30 seconds for the app to start, then GETs <https://heather-demo-chat.azurewebsites.net> and checks for the inline `heather-avatar` SVG marker in the HTML.
 
 ---
 
-## Suggested Improvements
+## SharePoint SPFx Web Part
 
-### High Priority
+A SharePoint Framework web part lives under `spfx-webpart/` and consumes the `POST /api/chat` endpoint exposed by this app. It is a **separate sub-project** with its own build chain (`gulp`, `npm`) and is built and deployed to SharePoint independently of this .NET project. The `HeatherDemoApp.csproj` explicitly excludes it from the .NET build/publish output.
 
-1. **Move secrets to Azure Key Vault or App Settings** — The API key should be stored in Azure Key Vault or as an App Service environment variable, never in `appsettings.json`
+The web part is allowed cross-origin by the `SharePointSPFx` CORS policy in `Program.cs`, which permits any subdomain of `*.sharepoint.com` / `*.sharepoint.us` and the SPFx local workbench at `https://localhost:4321`.
 
-2. **Replace hardcoded documents with real PDF ingestion** — Currently, HR documents are hardcoded strings in `PdfService.cs`. Integrate with Azure Blob Storage + Azure Document Intelligence to ingest actual PDF files dynamically
+---
 
-3. **Use vector embeddings instead of TF-IDF** — Replace the TF-IDF retrieval with Azure OpenAI Embeddings (e.g., `text-embedding-3-large`) for more accurate semantic search. Store embeddings in Azure AI Search or a vector database
+## Notes & Caveats
 
-4. **Fix static file serving** — The .NET 10 `MapStaticAssets()` system doesn't serve `wwwroot` files correctly on Azure App Service Linux. Currently worked around by using CDN for Bootstrap/jQuery and inline SVG. Investigate the root cause (likely a content root path mismatch)
-
-### Medium Priority
-
-5. **Add persistent chat storage** — Replace in-memory session storage with a database (e.g., Azure Cosmos DB or SQL) to persist conversations across sessions and restarts
-
-6. **Streaming responses** — Implement Server-Sent Events (SSE) or SignalR to stream Azure OpenAI responses token-by-token for a more responsive chat experience
-
-7. **Add authentication** — Integrate Azure AD / Entra ID for user authentication and role-based access
-
-8. **Implement proper logging and monitoring** — Add Application Insights for telemetry, request tracing, and error monitoring
-
-9. **Add error handling UI** — Show user-friendly error messages when the Azure OpenAI call fails or times out
-
-### Low Priority
-
-10. **Add document management UI** — Allow admins to upload, edit, and delete HR documents through the web interface
-
-11. **Multi-language support** — Add localization for non-English users
-
-12. **Dark mode** — Add a theme toggle for dark/light mode
-
-13. **Export chat history** — Allow users to download their chat conversations as PDF or text
-
-14. **Rate limiting** — Implement request rate limiting to prevent abuse of the AI endpoint
-
-15. **Unit and integration tests** — Add test coverage for services (AgentService, RetrievalService, PdfService) and page models
+- **`Services/ChatApiService.cs` is dead code.** It is a legacy HTTP wrapper around an Azure Function chat API that this app no longer uses. It is **not registered in `Program.cs`** and has no consumers. Leaving it in place for now to keep the diff small; safe to delete in a future cleanup.
+- **`appsettings.azure.json` is not loaded by ASP.NET Core.** Despite the suggestive filename, it is a JSON array of name/value pairs (not a valid configuration file) and is not referenced by `deploy_clean.ps1`. Likely an abandoned input for `az webapp config appsettings set --settings @appsettings.azure.json`. Safe to delete.
+- **Threads are created and deleted per request.** This keeps users isolated and avoids accumulating per-user thread state in Foundry, but it means every turn pays the full cost of replaying history. For higher-volume use cases consider a per-session thread cached in distributed state.
+- **In-memory session is single-instance only.** `AddDistributedMemoryCache()` does not survive a restart and does not work across multiple App Service instances. Replace with Redis (`AddStackExchangeRedisCache`) or SQL Server distributed cache if you scale out.
+- **The Foundry project is shared.** `appsettings.json` currently points at a multi-tenant Foundry project. The agent ID is the Heather agent within that project. If SWBC requires its own dedicated Foundry project, both values can be changed without code edits.
 
 ---
 
