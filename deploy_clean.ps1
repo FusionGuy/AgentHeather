@@ -34,10 +34,28 @@ dotnet publish HeatherDemoApp.csproj -c Release -r linux-x64 --self-contained fa
 Set-Content -Path "$deployDir\.deployment" -Value "[config]`nSCM_DO_BUILD_DURING_DEPLOYMENT=false"
 
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+Add-Type -Assembly "System.IO.Compression"
 Add-Type -Assembly "System.IO.Compression.FileSystem"
-[System.IO.Compression.ZipFile]::CreateFromDirectory($deployDir, $zipPath)
+
+# Build the zip entry-by-entry so all entry names use forward slashes.
+# (CreateFromDirectory on Windows PowerShell / .NET Framework uses '\' which
+# Kudu's Linux rsync cannot handle, causing "failed to stat" / exit code 23.)
+$rootFull = (Resolve-Path $deployDir).Path.TrimEnd('\','/')
+$fs = [System.IO.File]::Open($zipPath, [System.IO.FileMode]::Create)
+try {
+    $zip = New-Object System.IO.Compression.ZipArchive($fs, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        Get-ChildItem -LiteralPath $deployDir -Recurse -File | ForEach-Object {
+            $rel = $_.FullName.Substring($rootFull.Length).TrimStart('\','/')
+            $entryName = $rel -replace '\\','/'
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                $zip, $_.FullName, $entryName,
+                [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+        }
+    } finally { $zip.Dispose() }
+} finally { $fs.Dispose() }
 $sizeMB = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
-Write-Host "Zip created: $sizeMB MB"
+Write-Host "Zip created: $sizeMB MB (forward-slash entry names)"
 
 # Step 3: Deploy using ARM REST API (bypasses Kudu SCM entirely)
 Write-Host "`n--- Deploying via ARM API ---"
