@@ -1,9 +1,0 @@
-node_modules/
-lib/
-dist/
-temp/
-release/
-sharepoint/
-*.sppkg
-*.log
-.vscode/
